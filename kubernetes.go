@@ -3,6 +3,7 @@ package veneur
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
@@ -30,6 +31,12 @@ func NewKubernetesDiscoverer() (*KubernetesDiscoverer, error) {
 }
 
 func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([]string, error) {
+	// It looks like the serviceName is never actually consulted by the
+	// kubernetes integration. We'll see if we can help finish this integration
+	// and get it real configuration options. For now this continues the hack by
+	// looking for the string grpc in the servicename and then finding a port
+	// named grpc in the container spec.
+	isGrpc := strings.Contains(strings.ToLower(serviceName), "grpc")
 	pods, err := kd.clientset.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{
 		LabelSelector: "app=veneur-global",
 	})
@@ -50,6 +57,20 @@ func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([
 		if len(pod.Spec.Containers) > 0 {
 			for _, container := range pod.Spec.Containers {
 				for _, port := range container.Ports {
+					// Still hacking this right now. We'll check to see if we
+					// can help finish wiring up the kubernetes integration into
+					// the config structure. This should probably use a service
+					// name and find the pods from that selector, doing a
+					// similar port search as before.
+					if port.Name == "grpc" {
+						if isGrpc {
+							forwardPort = strconv.Itoa(int(port.ContainerPort))
+							log.WithField("port", forwardPort).Debug("Found grpc port")
+							break
+						}
+						continue
+					}
+
 					if port.Name == "http" {
 						forwardPort = strconv.Itoa(int(port.ContainerPort))
 						log.WithField("port", forwardPort).Debug("Found http port")
@@ -84,8 +105,14 @@ func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([
 		}
 
 		// prepend with // so that it is a valid URL parseable by url.Parse
-		podIp := fmt.Sprintf("http://%s:%s", pod.Status.PodIP, forwardPort)
-		ips = append(ips, podIp)
+		var podIP string
+		if isGrpc {
+			podIP = fmt.Sprintf("%s:%s", pod.Status.PodIP, forwardPort)
+		} else {
+			podIP = fmt.Sprintf("http://%s:%s", pod.Status.PodIP, forwardPort)
+		}
+
+		ips = append(ips, podIP)
 	}
 	return ips, nil
 }
