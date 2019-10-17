@@ -29,7 +29,7 @@
   revision = "f58c961370c5e74008eb4147e8926e8c036393f9"
 
 [[projects]]
-  digest = "1:b9c7a453e32c4e52ada1f07dcc2e1661198ed5c350efcdb0d3f14f7193155eed"
+  digest = "1:4ff438ebb7379128b531ba04b2ba9b9d32038c05ed3e177a69e080a67f2759c9"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -50,11 +50,14 @@
     "aws/signer/v4",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/ec2query",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
+    "service/autoscaling",
+    "service/ec2",
     "service/s3",
     "service/s3/s3iface",
     "service/sts",
@@ -838,6 +841,8 @@
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/autoscaling",
+    "github.com/aws/aws-sdk-go/service/ec2",
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/s3/s3iface",
     "github.com/axiomhq/hyperloglog",

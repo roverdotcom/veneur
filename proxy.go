@@ -33,7 +33,7 @@ import (
 	"github.com/zenazn/goji/graceful"
 	"stathat.com/c/consistent"
 
-	"goji.io"
+	goji "goji.io"
 	"goji.io/pat"
 )
 
@@ -287,13 +287,13 @@ func (p *Proxy) Start() {
 		p.Discoverer = disc
 		log.Info("Set Kubernetes discoverer")
 	} else if p.usingConsul {
-		disc, consulErr := NewConsul(config)
-		if consulErr != nil {
-			log.WithError(consulErr).Error("Error creating Consul discoverer")
+		disc, ec2DiscError := NewEc2Discoverer()
+		if ec2DiscError != nil {
+			log.WithError(ec2DiscError).Error("Error creating ec2 discoverer")
 			return
 		}
 		p.Discoverer = disc
-		log.Info("Set Consul discoverer")
+		log.Info("Set ec2 discoverer")
 	}
 
 	if p.AcceptingForwards && p.ConsulForwardService != "" {
