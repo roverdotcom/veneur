@@ -3,9 +3,10 @@ package veneur
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -30,6 +31,7 @@ func NewKubernetesDiscoverer() (*KubernetesDiscoverer, error) {
 }
 
 func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([]string, error) {
+	isGrpc := strings.Contains(strings.ToLower(serviceName), "grpc")
 	pods, err := kd.clientset.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{
 		LabelSelector: "app=veneur-global",
 	})
@@ -50,6 +52,15 @@ func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([
 		if len(pod.Spec.Containers) > 0 {
 			for _, container := range pod.Spec.Containers {
 				for _, port := range container.Ports {
+					if port.Name == "grpc" {
+						if isGrpc {
+							forwardPort = strconv.Itoa(int(port.ContainerPort))
+							log.WithField("port", forwardPort).Debug("Found grpc port")
+							break
+						}
+						continue
+					}
+
 					if port.Name == "http" {
 						forwardPort = strconv.Itoa(int(port.ContainerPort))
 						log.WithField("port", forwardPort).Debug("Found http port")
@@ -84,8 +95,14 @@ func (kd *KubernetesDiscoverer) GetDestinationsForService(serviceName string) ([
 		}
 
 		// prepend with // so that it is a valid URL parseable by url.Parse
-		podIp := fmt.Sprintf("http://%s:%s", pod.Status.PodIP, forwardPort)
-		ips = append(ips, podIp)
+		var podIP string
+		if isGrpc {
+			podIP = fmt.Sprintf("%s:%s", pod.Status.PodIP, forwardPort)
+		} else {
+			podIP = fmt.Sprintf("http://%s:%s", pod.Status.PodIP, forwardPort)
+		}
+
+		ips = append(ips, podIP)
 	}
 	return ips, nil
 }
