@@ -489,8 +489,8 @@ func (s *Server) forwardGRPC(ctx context.Context, wms []WorkerMetrics) {
 			span.Add(ssf.Count("forward.error_total", 1, map[string]string{"cause": "transient_unavailable"}))
 		} else {
 			span.Add(ssf.Count("forward.error_total", 1, map[string]string{"cause": "send"}))
-			entry.WithError(err).Error("Failed to forward to an upstream Veneur")
 		}
+		entry.WithError(err).Error("Failed to forward to an upstream Veneur")
 	} else {
 		entry.Info("Completed forward to an upstream Veneur")
 	}
